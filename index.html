@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Dashboard">
+  <title>iPhone XR Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #09090b;
+      color: #f4f4f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      width: 100vw;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 10px;
+      padding: 10px;
+      overflow: hidden;
+    }
+    .card {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: hidden;
+    }
+    #time { font-size: 2.2rem; font-weight: 700; line-height: 1; color: #38bdf8; }
+    #date { font-size: 0.9rem; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.5px; }
+    #verse-text { font-size: 0.85rem; font-style: italic; color: #e4e4e7; margin-top: 4px; }
+    #verse-ref { font-size: 0.75rem; color: #38bdf8; font-weight: 600; text-align: right; }
+    
+    /* Stream or Placeholder Frame */
+    .stream-box {
+      background: #000;
+      border-radius: 8px;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* To-Do List */
+    .todo-input {
+      display: flex;
+      gap: 6px;
+    }
+    input[type="text"] {
+      flex: 1;
+      background: #09090b;
+      border: 1px solid #27272a;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    button {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    ul { list-style: none; overflow-y: auto; flex: 1; }
+    li {
+      background: #09090b;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-top: 6px;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Left Column: Clock, Verse, Local Stream -->
+  <div style="display: flex; flex-direction: column; gap: 10px; height: 100%;">
+    <div class="card" style="flex: 0 0 auto;">
+      <div id="time">00:00</div>
+      <div id="date">Loading...</div>
+      <div id="verse-text">Loading daily verse...</div>
+      <div id="verse-ref"></div>
+    </div>
+    
+    <div class="card" style="flex: 1; padding: 0; position: relative;">
+      <!-- Local Stream Image (Displays stream when Python script runs on PC) -->
+      <img class="stream-box" src="http://192.168.25.6:5000/video" 
+           onerror="this.onerror=null; this.src='https://via.placeholder.com/896x414/09090b/3f3f46?text=PC+Stream+Offline';" 
+           alt="Stream">
+    </div>
+  </div>
+
+  <!-- Right Column: To-Do List -->
+  <div class="card">
+    <h3 style="font-size: 1rem;">To-Do List</h3>
+    <div class="todo-input">
+      <input type="text" id="task-in" placeholder="New task...">
+      <button onclick="addTask()">Add</button>
+    </div>
+    <ul id="task-list"></ul>
+  </div>
+
+  <script>
+    // Live Clock & Date
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('date').innerText = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Fetch Daily Bible Verse
+    fetch('https://bible-api.com/?random=verse')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('verse-text').innerText = `"${data.text.trim()}"`;
+        document.getElementById('verse-ref').innerText = `— ${data.reference}`;
+      })
+      .catch(() => { document.getElementById('verse-text').innerText = "Faith over fear."; });
+
+    // Local Storage To-Do List
+    function loadTasks() {
+      const tasks = JSON.parse(localStorage.getItem('dashboard_tasks') || '[]');
+      const list = document.getElementById('task-list');
+      list.innerHTML = '';
+      tasks.forEach((t, i) => {
+        list.innerHTML += `<li>${t} <span style="color:#ef4444; cursor:pointer;" onclick="removeTask(${i})">✕</span></li>`;
+      });
+    }
+    function addTask() {
+      const input = document.getElementById('task-in');
+      if (!input.value.trim()) return;
+      const tasks = JSON.parse(localStorage.getItem('dashboard_tasks') || '[]');
+      tasks.push(input.value.trim());
+      localStorage.setItem('dashboard_tasks', JSON.stringify(tasks));
+      input.value = '';
+      loadTasks();
+    }
+    function removeTask(i) {
+      const tasks = JSON.parse(localStorage.getItem('dashboard_tasks') || '[]');
+      tasks.splice(i, 1);
+      localStorage.setItem('dashboard_tasks', JSON.stringify(tasks));
+      loadTasks();
+    }
+    loadTasks();
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>
