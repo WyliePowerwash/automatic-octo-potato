@@ -17,121 +17,249 @@
       height: 100vh;
       width: 100vw;
       display: grid;
-      grid-template-columns: 1.2fr 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
       padding: 10px;
-      overflow: hidden;
+      overflow-y: auto;
     }
     .card {
       background: #18181b;
       border: 1px solid #27272a;
       border-radius: 12px;
-      padding: 14px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      overflow: hidden;
-    }
-    #time { font-size: 2.2rem; font-weight: 700; line-height: 1; color: #38bdf8; }
-    #date { font-size: 0.9rem; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.5px; }
-    #verse-text { font-size: 0.85rem; font-style: italic; color: #e4e4e7; margin-top: 4px; }
-    #verse-ref { font-size: 0.75rem; color: #38bdf8; font-weight: 600; text-align: right; }
-    
-    /* Stream or Placeholder Frame */
-    .stream-box {
-      background: #000;
-      border-radius: 8px;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    /* To-Do List */
-    .todo-input {
-      display: flex;
       gap: 6px;
+      position: relative;
+      transition: all 0.2s ease-in-out;
     }
-    input[type="text"] {
-      flex: 1;
-      background: #09090b;
-      border: 1px solid #27272a;
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-    }
-    button {
-      background: #0284c7;
-      color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    ul { list-style: none; overflow-y: auto; flex: 1; }
-    li {
-      background: #09090b;
-      padding: 6px 10px;
-      border-radius: 6px;
-      margin-top: 6px;
-      font-size: 0.85rem;
+    .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      border-bottom: 1px solid #27272a;
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+    }
+    .card-title { font-size: 0.9rem; font-weight: 700; color: #38bdf8; }
+    .card-btns { display: flex; gap: 4px; }
+    
+    /* Control Buttons */
+    .icon-btn {
+      background: #27272a;
+      color: #a1a1aa;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .icon-btn:hover { color: #fff; background: #3f3f46; }
+
+    /* Collapsed Card State */
+    .collapsed .card-body { display: none !important; }
+
+    /* Clock & Date */
+    #time { font-size: 1.6rem; font-weight: 700; line-height: 1; color: #38bdf8; }
+    #date { font-size: 0.75rem; color: #a1a1aa; text-transform: uppercase; font-weight: 600; }
+    
+    /* Inputs & UI Elements */
+    input[type="text"] {
+      background: #09090b;
+      border: 1px solid #27272a;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+    button.action-btn {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+
+    /* To-Do List */
+    ul { list-style: none; overflow-y: auto; max-height: 180px; margin-top: 4px; }
+    li {
+      background: #09090b;
+      padding: 6px 8px;
+      border-radius: 6px;
+      margin-top: 4px;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Fullscreen Overlay Style */
+    .fullscreen-card {
+      position: fixed !important;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 9999;
+      border-radius: 0;
     }
   </style>
 </head>
 <body>
 
-  <!-- Left Column: Clock, Verse, Local Stream -->
-  <div style="display: flex; flex-direction: column; gap: 10px; height: 100%;">
-    <div class="card" style="flex: 0 0 auto;">
-      <div id="time">00:00</div>
-      <div id="date">Loading...</div>
-      <div id="verse-text">Loading daily verse...</div>
-      <div id="verse-ref"></div>
-    </div>
+  <!-- Left Column: Clock, Weather, Verse -->
+  <div style="display: flex; flex-direction: column; gap: 10px;">
     
-    <div class="card" style="flex: 1; padding: 0; position: relative;">
-      <!-- Local Stream Image (Displays stream when Python script runs on PC) -->
-      <img class="stream-box" src="http://192.168.25.6:5000/video" 
-           onerror="this.onerror=null; this.src='https://via.placeholder.com/896x414/09090b/3f3f46?text=PC+Stream+Offline';" 
-           alt="Stream">
+    <!-- Widget 1: Clock & Weather -->
+    <div class="card" id="card-clock">
+      <div class="card-header">
+        <span class="card-title">Clock & Weather</span>
+        <div class="card-btns">
+          <button class="icon-btn" onclick="toggleMinimize('card-clock')">─</button>
+          <button class="icon-btn" onclick="toggleCardFullscreen('card-clock')">⛶</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="time">00:00:00 AM</div>
+        <div id="date">Loading...</div>
+        <div style="margin-top: 8px; font-size: 0.8rem;">
+          <div id="weather-desc" style="font-weight: 600;">Loading Weather...</div>
+          <div id="weather-temp" style="color: #a1a1aa;">--°F</div>
+          <div style="display: flex; gap: 4px; margin-top: 4px;">
+            <input type="text" id="zip-in" placeholder="Zip code..." style="width: 80px;">
+            <button class="action-btn" onclick="fetchWeatherByZip()">Set Zip</button>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- Widget 2: PC Stream -->
+    <div class="card" id="card-stream">
+      <div class="card-header">
+        <span class="card-title">Live PC Stream</span>
+        <div class="card-btns">
+          <button class="icon-btn" onclick="toggleMinimize('card-stream')">─</button>
+          <button class="icon-btn" onclick="toggleCardFullscreen('card-stream')">⛶</button>
+        </div>
+      </div>
+      <div class="card-body" style="height: 180px;">
+        <!-- Local IP Address Configurer -->
+        <div style="display:flex; gap:4px; margin-bottom:6px;">
+          <input type="text" id="ip-in" placeholder="192.168.25.6" style="flex:1;">
+          <button class="action-btn" onclick="updateStreamIP()">Connect IP</button>
+        </div>
+        <div style="width: 100%; height: 130px; background: #000; border-radius: 6px; overflow: hidden;">
+          <img id="stream-img" src="http://192.168.25.6:5000/video" 
+               style="width: 100%; height: 100%; object-fit: fill; display: block;"
+               onerror="this.onerror=null; this.src='https://via.placeholder.com/400x200/09090b/3f3f46?text=Stream+Offline+(Check+Local+HTTP)';" 
+               alt="Stream">
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- Right Column: To-Do List -->
-  <div class="card">
-    <h3 style="font-size: 1rem;">To-Do List</h3>
-    <div class="todo-input">
-      <input type="text" id="task-in" placeholder="New task...">
-      <button onclick="addTask()">Add</button>
+  <!-- Right Column: Bible Verse & To-Do List -->
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+
+    <!-- Widget 3: Daily Verse -->
+    <div class="card" id="card-verse">
+      <div class="card-header">
+        <span class="card-title">Daily Verse</span>
+        <div class="card-btns">
+          <button class="icon-btn" onclick="toggleMinimize('card-verse')">─</button>
+          <button class="icon-btn" onclick="toggleCardFullscreen('card-verse')">⛶</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="verse-text" style="font-size: 0.8rem; font-style: italic;">Loading...</div>
+        <div id="verse-ref" style="font-size: 0.75rem; color: #38bdf8; text-align: right; margin-top: 4px;"></div>
+      </div>
     </div>
-    <ul id="task-list"></ul>
+
+    <!-- Widget 4: To-Do List -->
+    <div class="card" id="card-todo">
+      <div class="card-header">
+        <span class="card-title">To-Do List</span>
+        <div class="card-btns">
+          <button class="icon-btn" onclick="toggleMinimize('card-todo')">─</button>
+          <button class="icon-btn" onclick="toggleCardFullscreen('card-todo')">⛶</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display: flex; gap: 4px;">
+          <input type="text" id="task-in" placeholder="New task..." style="flex: 1;">
+          <button class="action-btn" onclick="addTask()">Add</button>
+        </div>
+        <ul id="task-list"></ul>
+      </div>
+    </div>
+
   </div>
 
   <script>
-    // Live Clock & Date
+    // --- 1. Minimize & Fullscreen Controls ---
+    function toggleMinimize(id) {
+      document.getElementById(id).classList.toggle('collapsed');
+    }
+
+    function toggleCardFullscreen(id) {
+      const card = document.getElementById(id);
+      card.classList.toggle('fullscreen-card');
+    }
+
+    // --- 2. Local Stream IP Switching ---
+    function updateStreamIP() {
+      const ip = document.getElementById('ip-in').value.trim();
+      if (!ip) return;
+      localStorage.setItem('dashboard_stream_ip', ip);
+      document.getElementById('stream-img').src = `http://${ip}:5000/video`;
+    }
+    const savedIP = localStorage.getItem('dashboard_stream_ip') || '192.168.25.6';
+    document.getElementById('ip-in').value = savedIP;
+    document.getElementById('stream-img').src = `http://${savedIP}:5000/video`;
+
+    // --- 3. 12-Hour Clock ---
     function updateClock() {
       const now = new Date();
-      document.getElementById('time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      document.getElementById('date').innerText = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+      document.getElementById('time').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      document.getElementById('date').innerText = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     }
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Fetch Daily Bible Verse
+    // --- 4. Weather API ---
+    async function getWeather(lat, lon, name = "") {
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature&temperature_unit=fahrenheit`);
+        const data = await res.json();
+        document.getElementById('weather-desc').innerText = name ? `Weather (${name})` : "Current Weather";
+        document.getElementById('weather-temp').innerText = `${Math.round(data.current.temperature_2m)}°F (Feels like ${Math.round(data.current.apparent_temperature)}°F)`;
+      } catch (err) { document.getElementById('weather-desc').innerText = "Weather unavailable"; }
+    }
+    async function fetchWeatherByZip() {
+      const zip = document.getElementById('zip-in').value.trim();
+      if (!zip) return;
+      try {
+        const geoRes = await fetch(`https://api.zippopotam.us/us/${zip}`);
+        const geoData = await geoRes.json();
+        const place = geoData.places[0];
+        localStorage.setItem('dashboard_zip', zip);
+        getWeather(place.latitude, place.longitude, `${place['place name']}, ${place['state abbreviation']}`);
+      } catch (e) { alert("Invalid ZIP"); }
+    }
+    const savedZip = localStorage.getItem('dashboard_zip');
+    if (savedZip) { document.getElementById('zip-in').value = savedZip; fetchWeatherByZip(); }
+
+    // --- 5. Bible Verse ---
     fetch('https://bible-api.com/?random=verse')
       .then(res => res.json())
       .then(data => {
         document.getElementById('verse-text').innerText = `"${data.text.trim()}"`;
         document.getElementById('verse-ref').innerText = `— ${data.reference}`;
-      })
-      .catch(() => { document.getElementById('verse-text').innerText = "Faith over fear."; });
+      });
 
-    // Local Storage To-Do List
+    // --- 6. To-Do List ---
     function loadTasks() {
       const tasks = JSON.parse(localStorage.getItem('dashboard_tasks') || '[]');
       const list = document.getElementById('task-list');
@@ -156,11 +284,6 @@
       loadTasks();
     }
     loadTasks();
-
-    // Register Service Worker for PWA
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
   </script>
 </body>
 </html>
